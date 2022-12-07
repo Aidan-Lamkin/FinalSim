@@ -1,4 +1,5 @@
 #include <sstream>
+#include <queue>
 using namespace std;
 
 #include "m.h"
@@ -28,6 +29,12 @@ public:
     }
 };
 
+class Order{
+public:
+    int numberOfCars;
+    double deadline;
+};
+
 class Welford{
 public:
     int i = 0;
@@ -46,20 +53,67 @@ public:
     }
 };
 
+class Event{
+public:
+    string type;
+    double at;
+
+    bool operator<( const Event& rhs ) const {
+        // .at is activation time of the event
+        if( this->at == rhs.at) {
+            return this->type < rhs.type;
+        }
+        // inverted! we want the least // activation time to have
+        // higher priority
+        return !( this->at < rhs.at );
+    }
+};
+
 double Uniform(double alpha, double beta, double u){
     return alpha + (beta - alpha) * u;
+}
+
+double Triangular(double a, double c, double b, double u){
+    if(u <= (c - a) / (b - a)){
+        return a + sqrt((b - a) * (c - a) * u);
+    }
+    else{
+        return b - sqrt((b - a) * (b - c) * (1.0 - u));
+    }
 }
 
 long Equilikely(double alpha, double beta, double u){
     return (alpha + (long)((beta - alpha + 1) * u));
 }
 
+void runSim(Welford &w, RandomFile &r, int S, int s){
+    double t = 0.0;
+
+    priority_queue<Event, vector<Event> > eventList = priority_queue<Event, vector<Event> >();
+    int inventoryLevel = S;
+
+    while(!eventList.empty()){
+        Event currentEvent = eventList.top();
+        eventList.pop();
+        t = currentEvent.at;
+
+        //TODO process events here
+        if(currentEvent.type == "inventoryReview"){
+            if(inventoryLevel < s){
+                //TODO schedule inventory restock
+            }
+        }
+        else if(currentEvent.type == "inventoryRestock"){
+
+        }
+    }
+}
+
 int main( int argc, char* argv[] ){
-	if( argc == 4 ) {
-		experiment = argv[1][0];
-		istringstream( argv[2] ) >> seed;
-		istringstream( argv[3] ) >> threshold;
-	}
+	//TODO take in arguments
+    int S, s;
+
+
 	return 0;
 }
 
