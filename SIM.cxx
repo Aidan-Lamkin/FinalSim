@@ -1,5 +1,8 @@
 #include <sstream>
 #include <queue>
+#include <cmath>
+#include <iostream>
+#include <fstream>
 using namespace std;
 
 #include "m.h"
@@ -112,6 +115,9 @@ void runSim(Welford &w, RandomFile &r, int S, int s){
 int main( int argc, char* argv[] ){
 	//TODO take in arguments
     int S, s;
+    double a, b, c;
+    RandomFile r();
+    Welford w = Welford();
 
 
 	return 0;
