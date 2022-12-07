@@ -3,6 +3,7 @@
 #include <cmath>
 #include <iostream>
 #include <fstream>
+#include <stdlib.h>
 using namespace std;
 
 #include "m.h"
@@ -113,13 +114,34 @@ void runSim(Welford &w, RandomFile &r, int S, int s){
 }
 
 int main( int argc, char* argv[] ){
-	//TODO take in arguments
+	//Take in the arguments from command line
     int S, s;
     double a, b, c;
-    RandomFile r();
+    string runMode;
+    double start, end;
+
     Welford w = Welford();
 
+    runMode = argv[1];
 
+    string randomFileName(argc > 2 ? argv[2] : "/dev/null");
+    RandomFile r(randomFileName);
+
+    a = atof(argv[3]);
+    b = atof(argv[4]);
+    c = atof(argv[5]);
+
+    ifstream definitionFile = ifstream(argc > 6 ? argv[6] : "/dev/null", std::ifstream::in);
+    if(!definitionFile){
+        cerr << "Error opening definition file" << endl;
+            ::exit(1);
+    }
+
+    S = stoi(argv[7]);
+    s = stoi(argv[8]);
+
+    start = atof(argv[9]);
+    end = atof(argv[10]);
 	return 0;
 }
 
