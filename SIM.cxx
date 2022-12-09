@@ -37,6 +37,7 @@ class Order{
 public:
     int numberOfCars;
     double deadline;
+    double orderPlacementTime;  // Save the order placement time to calculate final discount to calculate penalty
      bool operator<( const Order& rhs ) const {
         return !( this->deadline < rhs.deadline );
     }
@@ -48,13 +49,14 @@ public:
     double ti = 0.0;
 
     int l;
-    int c = 0;;
+    int c = 0;
+
+    double previousDeliveryTime = 0.0;
 
     int minInventory = 99999;
     int penalties = 0;
     int maxRumorMill = 0;
     int orders = 0;
-
 };
 
 class Event{
@@ -97,7 +99,13 @@ long Equilikely(double alpha, double beta, double u){
     return (alpha + (long)((beta - alpha + 1) * u));
 }
 
-void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
+double calculateDeliveryLag(double previousTime, double q, double a, double b, double c, double u){
+    // TODO: Fix this when values: A, M, Pi are provided 
+    // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
+    return 0.0; 
+}
+
+void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int s, double start, double end){
     double t = 0.0;
 
     priority_queue<Event, vector<Event> > eventList = priority_queue<Event, vector<Event> >();
@@ -114,6 +122,8 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
                 Event nextRestock;
                 nextRestock.type = "inventoryRestock";
                 nextRestock.numberOfCars = S - (w.l + w.c);
+                nextRestock.at = t + calculateDeliveryLag(w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
+                eventList.push(nextRestock);
             }
 
             //Scheduling next inventory review in 60 working hours
@@ -123,6 +133,7 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
             eventList.push(nextReview);
         }
         else if(currentEvent.type == "inventoryRestock"){
+            w.previousDeliveryTime = t; // update the previous delivery time to current time
             w.l += currentEvent.numberOfCars;
         }
         else if(currentEvent.type == "carDemand"){
@@ -130,6 +141,7 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
                 //TODO need to figure out deadline
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
+                order.orderPlacementTime = t;
                 backOrders.push(order);
 
                 while(Equilikely(0, 1, r.getU()) == 1){
@@ -151,6 +163,7 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
                 //TODO need to figure out deadline
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
+                order.orderPlacementTime = t;
                 backOrders.push(order);
 
                 while(Equilikely(0, 1, r.getU()) == 1){
@@ -163,8 +176,6 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
                     demand.numberOfCars = 1;
                     eventList.push(demand);
                 }
-
-
             }
         }
         if(t >= start){
@@ -200,6 +211,11 @@ int main( int argc, char* argv[] ){
     Welford w = Welford();
     vector<Demand> demands = vector<Demand>();
 
+    if(argc < 11){
+        cerr << "Missing Required Parameters." << endl;
+        exit(-1);
+    }
+
     runMode = argv[1];
 
     string randomFileName(argc > 2 ? argv[2] : "/dev/null");
@@ -226,8 +242,6 @@ int main( int argc, char* argv[] ){
     b = atof(argv[5]);
     c = atof(argv[6]);
 
-    
-
     S = stoi(argv[7]);
     s = stoi(argv[8]);
 
@@ -238,7 +252,7 @@ int main( int argc, char* argv[] ){
     w.c = 0;
 
     if(runMode == "SIM"){
-        runSim(w, r, S, s, start, end);
+        runSim(w, r, a, b, c, S, s, start, end);
     }
     else if(runMode == "TRIANGLE"){
         runTriangle(r, a, b, c);
