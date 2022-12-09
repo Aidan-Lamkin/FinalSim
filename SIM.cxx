@@ -151,7 +151,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
-                w.c += currentEvent.numberOfCars;
+                w.c += currentEvent.numberOfCars; // increase the number of orders placed
 
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
@@ -163,19 +163,18 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                     demand.numberOfCars = 1;
                     eventList.push(demand);
                 }
-            } else { // cars in stock, decrease level
+            } else { // cars in stock, decrease level - don't need to schedule any new orders
                 w.l -= currentEvent.numberOfCars;
             }
         }
         else if(currentEvent.type == "rumorMillCarDemand"){
-            if(w.l <= 0){
-                w.l -= currentEvent.numberOfCars;
+            if(w.l <= 0){ // only order if there are no cars in stock
                 //TODO need to figure out deadline
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
-                w.c += currentEvent.numberOfCars;
+                w.c += currentEvent.numberOfCars; // increase the number of orders placed
 
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
