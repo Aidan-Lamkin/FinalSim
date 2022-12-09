@@ -37,6 +37,9 @@ class Order{
 public:
     int numberOfCars;
     double deadline;
+     bool operator<( const Order& rhs ) const {
+        return !( this->deadline < rhs.deadline );
+    }
 };
 
 class Welford{
@@ -92,7 +95,7 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
     double t = 0.0;
 
     priority_queue<Event, vector<Event> > eventList = priority_queue<Event, vector<Event> >();
-    int inventoryLevel = S;
+    priority_queue<Order, vector<Order> > backOrders = priority_queue<Order, vector<Order> >();
 
     while(!eventList.empty()){
         Event currentEvent = eventList.top();
@@ -114,10 +117,15 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
             eventList.push(nextReview);
         }
         else if(currentEvent.type == "inventoryRestock"){
-            
+            w.l += currentEvent.numberOfCars;
         }
         else if(currentEvent.type == "carDemand"){
             if(w.l <= 0){
+                //TODO need to figure out deadline
+                Order order;
+                order.numberOfCars = currentEvent.numberOfCars;
+                backOrders.push(order);
+
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
                     double h = Uniform(2, 9, u);
@@ -129,6 +137,41 @@ void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
                     eventList.push(demand);
                 }
             }
+            w.l -= currentEvent.numberOfCars;
+        }
+        else if(currentEvent.type == "rumorMillCarDemand"){
+            if(w.l <= 0){
+                w.l -= currentEvent.numberOfCars;
+                //TODO need to figure out deadline
+                Order order;
+                order.numberOfCars = currentEvent.numberOfCars;
+                backOrders.push(order);
+
+                while(Equilikely(0, 1, r.getU()) == 1){
+                    double u = r.getU();
+                    double h = Uniform(2, 9, u);
+
+                    Event demand;
+                    demand.at = t + h;
+                    demand.type = "rumorMillCarDemand";
+                    demand.numberOfCars = 1;
+                    eventList.push(demand);
+                }
+
+
+            }
+        }
+        if(t >= start){
+            if(w.l < w.minInventory){
+                w.minInventory = w.l;
+            }
+        }
+        if(t > end){
+            cout << "OUTPUT MININVENTORY" << w.minInventory << endl;
+            cout << "OUTPUT PENALTIES" << w.penalties << endl;
+            cout << "OUTPUT MAXRUMORMILL" << w.maxRumorMill << endl;
+            cout << "OUTPUT ORDERS" << w.orders << endl;
+            ::exit(0);
         }
     }
 }
