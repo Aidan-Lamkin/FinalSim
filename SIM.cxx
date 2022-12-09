@@ -74,6 +74,12 @@ public:
     }
 };
 
+class Demand{
+public:
+    double endT;
+    double level;
+}
+
 double Uniform(double alpha, double beta, double u){
     return alpha + (beta - alpha) * u;
 }
@@ -192,6 +198,7 @@ int main( int argc, char* argv[] ){
     ifstream definitionFile;
 
     Welford w = Welford();
+    vector<Demand> demands = vector<Demand>();
 
     runMode = argv[1];
 
@@ -203,6 +210,15 @@ int main( int argc, char* argv[] ){
         if(!definitionFile){
             cerr << "Error opening definition file" << endl;
                 ::exit(1);
+        }
+        else{
+            //fills in demand levels at t
+            while(!definitionFile.eof()){
+                Demand d;
+                definitionFile >> d.endT;
+                definitionFile >> d.level;
+                demands.push_back(d);
+            }
         }
     }
 
