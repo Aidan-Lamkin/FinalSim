@@ -137,12 +137,13 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             w.l += currentEvent.numberOfCars;
         }
         else if(currentEvent.type == "carDemand"){
-            if(w.l <= 0){
+            if(w.l <= 0){ // no cars in stock, increase order count
                 //TODO need to figure out deadline
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
+                w.c += currentEvent.numberOfCars;
 
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
@@ -154,8 +155,9 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                     demand.numberOfCars = 1;
                     eventList.push(demand);
                 }
+            } else { // cars in stock, decrease level
+                w.l -= currentEvent.numberOfCars;
             }
-            w.l -= currentEvent.numberOfCars;
         }
         else if(currentEvent.type == "rumorMillCarDemand"){
             if(w.l <= 0){
@@ -165,6 +167,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
+                w.c += currentEvent.numberOfCars;
 
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
@@ -211,6 +214,7 @@ int main( int argc, char* argv[] ){
     Welford w = Welford();
     vector<Demand> demands = vector<Demand>();
 
+    // check that simulation has enough parameters - prevents segfault
     if(argc < 11){
         cerr << "Missing Required Parameters." << endl;
         exit(-1);
