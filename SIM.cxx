@@ -78,7 +78,7 @@ class Demand{
 public:
     double endT;
     double level;
-}
+};
 
 double Uniform(double alpha, double beta, double u){
     return alpha + (beta - alpha) * u;
