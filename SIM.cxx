@@ -42,25 +42,23 @@ public:
 class Welford{
 public:
     int i = 0;
-    double xibar = 0.0;
-    double vi = 0.0;
+    double ti = 0.0;
 
-    void addDataPoint(double xi){
-        double diff = xi - xibar;
-        i++;
-        vi = vi + ((i - 1) / (double)i) * pow(diff, 2);
-        xibar = xibar + (1 / (double)i) * diff;
-    }
+    int l;
+    int c = 0;;
 
-    double getStandardDeviation(){
-        return sqrt(vi / i);
-    }
+    int minInventory = 99999;
+    int penalties = 0;
+    int maxRumorMill = 0;
+    int orders = 0;
+
 };
 
 class Event{
 public:
     string type;
     double at;
+    int numberOfCars;
 
     bool operator<( const Event& rhs ) const {
         // .at is activation time of the event
@@ -90,7 +88,7 @@ long Equilikely(double alpha, double beta, double u){
     return (alpha + (long)((beta - alpha + 1) * u));
 }
 
-void runSim(Welford &w, RandomFile &r, int S, int s){
+void runSim(Welford &w, RandomFile &r, int S, int s, double start, double end){
     double t = 0.0;
 
     priority_queue<Event, vector<Event> > eventList = priority_queue<Event, vector<Event> >();
@@ -103,13 +101,42 @@ void runSim(Welford &w, RandomFile &r, int S, int s){
 
         //TODO process events here
         if(currentEvent.type == "inventoryReview"){
-            if(inventoryLevel < s){
-                //TODO schedule inventory restock
+            if(w.l + w.c <= s){
+                Event nextRestock;
+                nextRestock.type = "inventoryRestock";
+                nextRestock.numberOfCars = S - (w.l + w.c);
             }
+
+            //Scheduling next inventory review in 60 working hours
+            Event nextReview;
+            nextReview.type = "inventoryReview";
+            nextReview.at = t + 60;
+            eventList.push(nextReview);
         }
         else if(currentEvent.type == "inventoryRestock"){
-
+            
         }
+        else if(currentEvent.type == "carDemand"){
+            if(w.l <= 0){
+                while(Equilikely(0, 1, r.getU()) == 1){
+                    double u = r.getU();
+                    double h = Uniform(2, 9, u);
+
+                    Event demand;
+                    demand.at = t + h;
+                    demand.type = "rumorMillCarDemand";
+                    demand.numberOfCars = 1;
+                    eventList.push(demand);
+                }
+            }
+        }
+    }
+}
+
+void runTriangle(RandomFile &r, double a, double b, double c){
+    while(true){
+        double u = r.getU();
+        cout << "OUTPUT:" << Triangular(a, b, c, u);
     }
 }
 
@@ -119,6 +146,7 @@ int main( int argc, char* argv[] ){
     double a, b, c;
     string runMode;
     double start, end;
+    ifstream definitionFile;
 
     Welford w = Welford();
 
@@ -127,21 +155,35 @@ int main( int argc, char* argv[] ){
     string randomFileName(argc > 2 ? argv[2] : "/dev/null");
     RandomFile r(randomFileName);
 
-    a = atof(argv[3]);
-    b = atof(argv[4]);
-    c = atof(argv[5]);
-
-    ifstream definitionFile = ifstream(argc > 6 ? argv[6] : "/dev/null", std::ifstream::in);
-    if(!definitionFile){
-        cerr << "Error opening definition file" << endl;
-            ::exit(1);
+    if(runMode != "TRIANGLE"){
+        definitionFile = ifstream(argc > 3 ? argv[3] : "/dev/null", std::ifstream::in);
+        if(!definitionFile){
+            cerr << "Error opening definition file" << endl;
+                ::exit(1);
+        }
     }
+
+    a = atof(argv[4]);
+    b = atof(argv[5]);
+    c = atof(argv[6]);
+
+    
 
     S = stoi(argv[7]);
     s = stoi(argv[8]);
 
     start = atof(argv[9]);
     end = atof(argv[10]);
+
+    w.l = S;
+    w.c = 0;
+
+    if(runMode == "SIM"){
+        runSim(w, r, S, s, start, end);
+    }
+    else if(runMode == "TRIANGLE"){
+        runTriangle(r, a, b, c);
+    }
 	return 0;
 }
 
