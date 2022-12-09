@@ -135,6 +135,14 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
         else if(currentEvent.type == "inventoryRestock"){
             w.previousDeliveryTime = t; // update the previous delivery time to current time
             w.l += currentEvent.numberOfCars;
+
+            // Everytime we get new orders, cycle through the N new cars arriving, and calculate the penalty
+            for(int i = 0; i < currentEvent.numberOfCars; i++){
+                Order currOrder = backOrders.top();
+                backOrders.pop();
+                
+                w.penalties += floor((t - currOrder.orderPlacementTime) / 10.0) * 100;
+            }
         }
         else if(currentEvent.type == "carDemand"){
             if(w.l <= 0){ // no cars in stock, increase order count
