@@ -111,7 +111,7 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
     double tK = demands[last].tRight;
     double cumulativeArrivals = demands[last].arrivalRight;
 
-    double ai = previousArrival - floor(previousArrival / tK) * tK;
+    double ai = previousArrival - floor(double(previousArrival) / tK) * tK;
     int ji = 0;
     while(ai > demands[ji].tRight){
         ji++;
@@ -124,7 +124,7 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
 
     double tCycle = 0;
     if(Ai1 >= cumulativeArrivals){
-        int w = floor((Ai1 - Ai) / cumulativeArrivals);
+        int w = floor(double(Ai1 - Ai) / cumulativeArrivals);
 
         Ai1 -= w * cumulativeArrivals;
         tCycle += w * cumulativeArrivals;
@@ -140,7 +140,7 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
         ji1++;
     }
 
-    double ai1 = ((Ai1 - demands[ji1].arrivalLeft) / demands[ji1].slope) + demands[ji1].tLeft;
+    double ai1 = (double(Ai1 - demands[ji1].arrivalLeft) / demands[ji1].slope) + demands[ji1].tLeft;
 
     if(tCycle > 0){
         return previousArrival + tCycle + ai1;
@@ -152,7 +152,6 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
 
 
 double calculateDeliveryLag(double previousTime, double q, double a, double b, double c, double u){
-    // TODO: Fix this when values: A, M, Pi are provided 
     // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
     return previousTime + ((387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
 }
