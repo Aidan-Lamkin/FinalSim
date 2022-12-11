@@ -102,7 +102,7 @@ long Equilikely(double alpha, double beta, double u){
 double calculateDeliveryLag(double previousTime, double q, double a, double b, double c, double u){
     // TODO: Fix this when values: A, M, Pi are provided 
     // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
-    return 0.0; 
+    return previosTime + ((387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
 }
 
 void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int s, double start, double end){
