@@ -78,8 +78,11 @@ public:
 
 class Demand{
 public:
-    double endT;
-    double level;
+    double tLeft;
+    double tRight;
+    double arrivalLeft;
+    double arrivalRight;
+    double slope;
 };
 
 double Uniform(double alpha, double beta, double u){
@@ -99,10 +102,13 @@ long Equilikely(double alpha, double beta, double u){
     return (alpha + (long)((beta - alpha + 1) * u));
 }
 
+double Exponential(double mew, double u){
+    return (-mew * log(1.0 - u));
+}
 double calculateDeliveryLag(double previousTime, double q, double a, double b, double c, double u){
     // TODO: Fix this when values: A, M, Pi are provided 
     // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
-    return previosTime + ((387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
+    return previousTime + ((387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
 }
 
 void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int s, double start, double end){
@@ -210,6 +216,21 @@ void runTriangle(RandomFile &r, double a, double b, double c){
     }
 }
 
+double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r){
+    int last = demands.size() - 1;
+    double tK = demands[last].tRight;
+    double cumulativeArrivals = demands[last].arrivalRight;
+
+    double nextArrival = previousArrival - floor(previousArrival / tK) * tK;
+    int ji = 0;
+    while(nextArrival > demands[ji].tRight){
+        ji++;
+    }
+
+    double u = r.getU();
+    double A = previousArrival + Exponential(1.0 , u);
+}
+
 int main( int argc, char* argv[] ){
 	//Take in the arguments from command line
     int S, s;
@@ -239,11 +260,19 @@ int main( int argc, char* argv[] ){
                 ::exit(1);
         }
         else{
-            //fills in demand levels at t
+            //fills in demand objects
+            double startT = 0.0;
+            double L = 0.0;
             while(!definitionFile.eof()){
                 Demand d;
-                definitionFile >> d.endT;
-                definitionFile >> d.level;
+                d.tLeft = startT;
+                definitionFile >> d.tRight;
+                definitionFile >> d.slope;
+                d.arrivalLeft = L;
+                double l = d.slope * (d.tRight - d.tLeft);
+                L += l;
+                d.arrivalRight = L;
+                startT = d.tRight;
                 demands.push_back(d);
             }
         }
