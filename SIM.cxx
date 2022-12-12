@@ -51,6 +51,8 @@ public:
     int l;
     int c = 0;
 
+    int backOrdered = 0;
+
     double previousDeliveryTime = 0.0;
 
     int minInventory = 99999;
@@ -90,7 +92,7 @@ double Uniform(double alpha, double beta, double u){
 }
 
 double Triangular(double a, double c, double b, double u){
-    if(u <= (c - a) / (b - a)){
+    if(u <= double(c - a) / double(b - a)){
         return a + sqrt((b - a) * (c - a) * u);
     }
     else{
@@ -112,6 +114,7 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
     double cumulativeArrivals = demands[last].arrivalRight;
 
     double ai = previousArrival - floor(double(previousArrival) / tK) * tK;
+
     int ji = 0;
     while(ai > demands[ji].tRight){
         ji++;
@@ -120,7 +123,7 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
     double Ai = demands[ji].arrivalLeft + demands[ji].slope * (ai - demands[ji].tLeft);
 
     double u = r.getU();
-    double Ai1 = previousArrival + Exponential(1.0 , u);
+    double Ai1 = Ai + Exponential(1.0 , u);
 
     double tCycle = 0;
     if(Ai1 >= cumulativeArrivals){
@@ -175,6 +178,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
     firstInventoryReview.numberOfCars = 0;
     eventList.push(firstInventoryReview);
 
+
     while(!eventList.empty()){
         Event currentEvent = eventList.top();
         eventList.pop();
@@ -184,10 +188,16 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
         if(currentEvent.type == "inventoryReview"){
 
             if(w.l - w.c <= s){
+                if(t > start){
+                    w.orders++;
+                }
                 Event nextRestock;
                 nextRestock.type = "inventoryRestock";
-                nextRestock.numberOfCars = S + (w.l + w.c);
+                nextRestock.numberOfCars = S + (w.l + w.c) - w.backOrdered;
+
+                w.backOrdered += nextRestock.numberOfCars;
                 nextRestock.at = t + calculateDeliveryLag(w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
+                
                 eventList.push(nextRestock);
                 cout << "DEBUG: restock scheduled at " << nextRestock.at << " because w.l + w.c = " << w.l + w.c << endl;
             }
@@ -200,6 +210,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
         }
         else if(currentEvent.type == "inventoryRestock"){
             cout << "DEBUG: restock at time " << t << endl; 
+            w.backOrdered -= currentEvent.numberOfCars;
 
             w.previousDeliveryTime = t; // update the previous delivery time to current time
             
@@ -217,14 +228,14 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
 
         }
         else if(currentEvent.type == "carDemand"){
-            cout << "DEBUG: demand at time " << t << endl; 
-            if(w.l <= 0){ // no cars in stock, increase order count
-                //TODO need to figure out deadline
+            //cout << "DEBUG: demand at time " << t << endl; 
+            if(w.l <= 0){
+                // no cars in stock, increase order count
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
-                w.orders++;
+
                 w.c += currentEvent.numberOfCars; // increase the number of orders placed
                 
                 while(Equilikely(0, 1, r.getU()) == 1){
@@ -239,7 +250,8 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                     rumorMill++;
                 }
             }
-            else { // cars in stock, decrease level - don't need to schedule any new orders
+            else { 
+                // cars in stock, decrease level - don't need to schedule any new orders
                 w.l -= currentEvent.numberOfCars;
             }
 
@@ -251,15 +263,14 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             eventList.push(nextDemand);
         }
         else if(currentEvent.type == "rumorMillCarDemand"){
-            cout << "DEBUG: rumor demand at time " << t << endl; 
+            //cout << "DEBUG: rumor demand at time " << t << endl; 
 
             if(w.l <= 0){ // only order if there are no cars in stock
-                //TODO need to figure out deadline
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
-                w.orders++;
+
                 w.c += currentEvent.numberOfCars; // increase the number of orders placed
 
                 while(Equilikely(0, 1, r.getU()) == 1){
@@ -339,9 +350,11 @@ int main( int argc, char* argv[] ){
                 definitionFile >> d.tRight;
                 definitionFile >> d.slope;
                 d.arrivalLeft = L;
+
                 double l = d.slope * (d.tRight - d.tLeft);
                 L += l;
                 d.arrivalRight = L;
+
                 startT = d.tRight;
                 demands.push_back(d);
             }
