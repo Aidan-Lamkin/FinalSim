@@ -38,7 +38,7 @@ public:
     int numberOfCars;
     double deadline;
     double orderPlacementTime;  // Save the order placement time to calculate final discount to calculate penalty
-     bool operator<( const Order& rhs ) const {
+    bool operator<( const Order& rhs ) const {
         return !( this->deadline < rhs.deadline );
     }
 };
@@ -48,17 +48,19 @@ public:
     int i = 0;
     double ti = 0.0;
 
-    int l;
-    int c = 0;
+    int inventory;
+    int onOrder = 0;
 
-    int backOrdered = 0;
+    int backorderCount = 0;
 
     double previousDeliveryTime = 0.0;
 
     int minInventory = 99999;
-    int penalties = 0;
+    long penalties = 0;
     int maxRumorMill = 0;
     int orders = 0;
+
+    int numberLate = 0;
 };
 
 class Event{
@@ -153,18 +155,19 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
     }
 }
 
-
-double calculateDeliveryLag(double previousTime, double q, double a, double b, double c, double u){
+double calculateDeliveryLag(double t, double previousTime, double q, double a, double b, double c, double u){
     // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
-    return previousTime + ((387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
+    return max(previousTime, t) + (double(387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
 }
 
 void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int s, double start, double end, vector<Demand> demands){
     double t = 0.0;
 
+    //initialize event list and back order queue
     priority_queue<Event, vector<Event> > eventList = priority_queue<Event, vector<Event> >();
     priority_queue<Order, vector<Order> > backOrders = priority_queue<Order, vector<Order> >();
 
+    //schedule first arrival
     Event firstArrival;
     double ar = nextArrival(0.0, demands,r);
     firstArrival.type = "carDemand";
@@ -172,6 +175,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
     firstArrival.numberOfCars = 1;
     eventList.push(firstArrival);
 
+    //schedule first inventory review
     Event firstInventoryReview;
     firstInventoryReview.type = "inventoryReview";
     firstInventoryReview.at = 60;
@@ -180,37 +184,44 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
 
 
     while(!eventList.empty()){
+
+        //get and pop imminent event
         Event currentEvent = eventList.top();
         eventList.pop();
         t = currentEvent.at;
+
+        //initialize number of rumor mill for demand generated to be 0 
         int rumorMill = 0;
 
         if(currentEvent.type == "inventoryReview"){
-
-            if(w.l - w.c <= s){
-                if(t > start){
-                    w.orders++;
-                }
-                Event nextRestock;
-                nextRestock.type = "inventoryRestock";
-                nextRestock.numberOfCars = S + (w.l + w.c) - w.backOrdered;
-
-                w.backOrdered += nextRestock.numberOfCars;
-                nextRestock.at = t + calculateDeliveryLag(w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
-                
-                eventList.push(nextRestock);
-                cout << "DEBUG: restock scheduled at " << nextRestock.at << " because w.l + w.c = " << w.l + w.c << endl;
-            }
 
             //Scheduling next inventory review in 60 working hours
             Event nextReview;
             nextReview.type = "inventoryReview";
             nextReview.at = t + 60;
-            eventList.push(nextReview);
+            if(nextReview.at < end){
+                eventList.push(nextReview);
+            }
+
+            //If inventory is below threshold schedule restock
+            if(w.inventory + w.onOrder <= s){
+                Event nextRestock;
+                nextRestock.type = "inventoryRestock";
+                nextRestock.numberOfCars = S - (w.inventory + w.onOrder);
+                nextRestock.at = t + calculateDeliveryLag(t,w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
+
+                w.onOrder += nextRestock.numberOfCars;
+                eventList.push(nextRestock);
+                if(t >= start){
+                    w.orders++;
+                }
+            }
         }
         else if(currentEvent.type == "inventoryRestock"){
-            cout << "DEBUG: restock at time " << t << endl; 
-            w.backOrdered -= currentEvent.numberOfCars;
+            cout << "DEBUG: restock of " << currentEvent.numberOfCars << " at time of " << t << endl; 
+
+            w.onOrder -= currentEvent.numberOfCars;
+            w.inventory += currentEvent.numberOfCars;
 
             w.previousDeliveryTime = t; // update the previous delivery time to current time
             
@@ -220,24 +231,36 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 Order currOrder = backOrders.top();
                 backOrders.pop();
                 
-                w.penalties += floor((t - currOrder.orderPlacementTime) / 10.0) * 100;
+                if(t > start){
+                    w.penalties += floor(double(t - currOrder.orderPlacementTime) / 10.0) * 100;
+                    w.numberLate++;
+                }
                 numberOfCarsToGive--;
             }
-            w.c = backOrders.size();
-            w.l += numberOfCarsToGive;
-
         }
         else if(currentEvent.type == "carDemand"){
-            //cout << "DEBUG: demand at time " << t << endl; 
-            if(w.l <= 0){
+            //cout << "DEBUG: demand at time " << t << endl;
+
+            //schedule next demand
+            Event nextDemand;
+            nextDemand.type = "carDemand";
+            nextDemand.at = nextArrival(t, demands, r);
+            nextDemand.numberOfCars = 1;
+            eventList.push(nextDemand);
+
+
+            if(w.inventory <= 0){
                 // no cars in stock, increase order count
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
 
-                w.c += currentEvent.numberOfCars; // increase the number of orders placed
+                w.inventory -= currentEvent.numberOfCars;
+                w.backorderCount += currentEvent.numberOfCars;
+                // increase the number of orders placed
                 
+                //rumormill
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
                     double h = Uniform(2, 9, u);
@@ -252,27 +275,24 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
             else { 
                 // cars in stock, decrease level - don't need to schedule any new orders
-                w.l -= currentEvent.numberOfCars;
+                w.inventory -= currentEvent.numberOfCars;
             }
 
-            //schedule next demand
-            Event nextDemand;
-            nextDemand.type = "carDemand";
-            nextDemand.at = nextArrival(t, demands, r);
-            nextDemand.numberOfCars = 1;
-            eventList.push(nextDemand);
+           
         }
         else if(currentEvent.type == "rumorMillCarDemand"){
-            //cout << "DEBUG: rumor demand at time " << t << endl; 
 
-            if(w.l <= 0){ // only order if there are no cars in stock
+            if(w.inventory <= 0){ 
+                // only order if there are no cars in stock
                 Order order;
                 order.numberOfCars = currentEvent.numberOfCars;
                 order.orderPlacementTime = t;
                 backOrders.push(order);
 
-                w.c += currentEvent.numberOfCars; // increase the number of orders placed
+                w.inventory -= currentEvent.numberOfCars;
+                w.backorderCount += currentEvent.numberOfCars;
 
+                //rumormill
                 while(Equilikely(0, 1, r.getU()) == 1){
                     double u = r.getU();
                     double h = Uniform(2, 9, u);
@@ -285,19 +305,23 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 }
             }
         }
+        //update statistics if in results window
         if(t >= start){
-            if(w.l - w.c < w.minInventory){
-                w.minInventory = w.l - w.c;
+            if(w.inventory < w.minInventory){
+                w.minInventory = w.inventory;
+                cout << "Min inventory now " << w.minInventory << " at " << t << endl;
             }
             if(rumorMill > w.maxRumorMill){
                 w.maxRumorMill = rumorMill;
             }
         }
+        //if past results window print OUTPUT and exit
         if(t > end){
             cout << "OUTPUT MININVENTORY " << w.minInventory << endl;
             cout << "OUTPUT PENALTIES " << w.penalties << endl;
             cout << "OUTPUT MAXRUMORMILL " << w.maxRumorMill << endl;
             cout << "OUTPUT ORDERS " << w.orders << endl;
+            cout << w.numberLate << endl;
             ::exit(0);
         }
     }
@@ -309,8 +333,6 @@ void runTriangle(RandomFile &r, double a, double b, double c){
         cout << "OUTPUT:" << Triangular(a, b, c, u);
     }
 }
-
-
 
 int main( int argc, char* argv[] ){
 	//Take in the arguments from command line
@@ -371,8 +393,8 @@ int main( int argc, char* argv[] ){
     start = atof(argv[9]);
     end = atof(argv[10]);
 
-    w.l = S;
-    w.c = 0;
+    w.inventory = S;
+    w.onOrder = 0;
 
     if(runMode == "SIM"){
         runSim(w, r, a, b, c, S, s, start, end, demands);
