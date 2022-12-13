@@ -236,7 +236,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
         }
         else if(currentEvent.type == "carDemand"){
-            //cout << "DEBUG: demand at time " << t << endl;
+            cout << "DEBUG: demand at time " << t << endl;
 
             //schedule next demand
             Event nextDemand;
@@ -306,7 +306,6 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
         if(t >= start){
             if(w.inventory < w.minInventory){
                 w.minInventory = w.inventory;
-                cout << "Min inventory now " << w.minInventory << " at " << t << endl;
             }
             if(rumorMill > w.maxRumorMill){
                 w.maxRumorMill = rumorMill;
