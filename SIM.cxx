@@ -36,10 +36,9 @@ public:
 class Order{
 public:
     int numberOfCars;
-    double deadline;
     double orderPlacementTime;  // Save the order placement time to calculate final discount to calculate penalty
     bool operator<( const Order& rhs ) const {
-        return !( this->deadline < rhs.deadline );
+        return !( this->orderPlacementTime < rhs.orderPlacementTime );
     }
 };
 
@@ -60,7 +59,6 @@ public:
     int maxRumorMill = 0;
     int orders = 0;
 
-    int numberLate = 0;
 };
 
 class Event{
@@ -233,7 +231,6 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 
                 if(t > start){
                     w.penalties += floor(double(t - currOrder.orderPlacementTime) / 10.0) * 100;
-                    w.numberLate++;
                 }
                 numberOfCarsToGive--;
             }
@@ -321,7 +318,6 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             cout << "OUTPUT PENALTIES " << w.penalties << endl;
             cout << "OUTPUT MAXRUMORMILL " << w.maxRumorMill << endl;
             cout << "OUTPUT ORDERS " << w.orders << endl;
-            cout << w.numberLate << endl;
             ::exit(0);
         }
     }
