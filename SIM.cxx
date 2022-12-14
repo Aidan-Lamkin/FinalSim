@@ -215,7 +215,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
         }
         else if(currentEvent.type == "inventoryRestock"){
-            cout << "DEBUG: restock of " << currentEvent.numberOfCars << " at time of " << t << endl; 
+            // cout << "DEBUG: restock of " << currentEvent.numberOfCars << " at time of " << t << endl; 
 
             w.onOrder -= currentEvent.numberOfCars;
             w.inventory += currentEvent.numberOfCars;
@@ -235,7 +235,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
         }
         else if(currentEvent.type == "carDemand"){
-            cout << "DEBUG: demand at time " << t << endl;
+            // cout << "DEBUG: demand at time " << t << endl;
 
             //schedule next demand
             Event nextDemand;
@@ -312,11 +312,11 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
         }
         //if past results window print OUTPUT and exit
         if(t > end){
-            cout << "OUTPUT MININVENTORY " << w.minInventory << endl;
-            cout << "OUTPUT PENALTIES " << w.penalties << endl;
-            cout << "OUTPUT MAXRUMORMILL " << w.maxRumorMill << endl;
-            cout << "OUTPUT ORDERS " << w.orders << endl;
-            ::exit(0);
+            // cout << "OUTPUT MININVENTORY " << w.minInventory << endl;
+            // cout << "OUTPUT PENALTIES " << w.penalties << endl;
+            // cout << "OUTPUT MAXRUMORMILL " << w.maxRumorMill << endl;
+            // cout << "OUTPUT ORDERS " << w.orders << endl;
+            return;
         }
     }
 }
@@ -388,27 +388,25 @@ int main( int argc, char* argv[] ){
     b = atof(argv[5]);
     c = atof(argv[6]);
 
-    cerr << a << endl;
-    cerr << b << endl;
-    cerr << c << endl;
-
     S = stoi(argv[7]);
     s = stoi(argv[8]);
-
-    cerr << S << endl;
-    cerr << s << endl;
 
     start = atof(argv[9]);
     end = atof(argv[10]);
 
-    cerr << start << endl;
-    cerr << end << endl;
-
     w.inventory = S;
     w.onOrder = 0;
 
-    if(runMode == "SIM"){
-        runSim(w, r, a, b, c, S, s, start, end, demands);
+    if(runMode == "RESULTS"){
+        for(int newS = 0; newS <= 99; newS++){
+            Welford newW = Welford();
+            newW.inventory = S;
+            newW.onOrder = 0;
+            for(int i = 0; i < 5; i++){
+                runSim(newW, r, a, b, c, S, newS, start, end, demands);
+            }
+            cout << (newW.penalties / 5.0) << endl;
+        }
     }
     else if(runMode == "TRIANGLE"){
         runTriangle(r, a, b, c);
