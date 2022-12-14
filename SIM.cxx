@@ -328,6 +328,14 @@ void runTriangle(RandomFile &r, double a, double b, double c){
     }
 }
 
+void runArrival(RandomFile &r, vector<Demand> demands){
+    double next = 0.0;
+    while(true){
+        next = nextArrival(next, demands, r);
+        cout << "OUTPUT " << next << endl;
+    }
+}
+
 int main( int argc, char* argv[] ){
 	//Take in the arguments from command line
     int S, s;
@@ -404,6 +412,9 @@ int main( int argc, char* argv[] ){
     }
     else if(runMode == "TRIANGLE"){
         runTriangle(r, a, b, c);
+    } else if (runMode == "ARRIVALS"){
+        runArrival(r, demands);
     }
+
 	return -1;
 }
