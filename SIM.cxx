@@ -6,7 +6,6 @@
 #include <stdlib.h>
 using namespace std;
 
-#include "m.h"
 class RandomFile{
 public:
     ifstream r;
@@ -24,7 +23,7 @@ public:
         }
         else{
             cerr << "Ran out of random numbers" << endl;
-            ::exit(1);
+            ::exit(0);
         }
         return u;
     }
@@ -92,7 +91,7 @@ double Uniform(double alpha, double beta, double u){
 }
 
 double Triangular(double a, double c, double b, double u){
-    if(u <= double(c - a) / double(b - a)){
+    if(u <= (double(c - a) / double(b - a))){
         return a + sqrt((b - a) * (c - a) * u);
     }
     else{
@@ -325,7 +324,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
 void runTriangle(RandomFile &r, double a, double b, double c){
     while(true){
         double u = r.getU();
-        cout << "OUTPUT:" << Triangular(a, b, c, u);
+        cout << "OUTPUT " << Triangular(a, c, b, u) << endl;
     }
 }
 
@@ -339,11 +338,10 @@ int main( int argc, char* argv[] ){
 
     Welford w = Welford();
     vector<Demand> demands = vector<Demand>();
-
     // check that simulation has enough parameters - prevents segfault
     if(argc < 11){
         cerr << "Missing Required Parameters." << endl;
-        exit(-1);
+        ::exit(-1);
     }
 
     runMode = argv[1];
@@ -382,11 +380,21 @@ int main( int argc, char* argv[] ){
     b = atof(argv[5]);
     c = atof(argv[6]);
 
+    cerr << a << endl;
+    cerr << b << endl;
+    cerr << c << endl;
+
     S = stoi(argv[7]);
     s = stoi(argv[8]);
 
+    cerr << S << endl;
+    cerr << s << endl;
+
     start = atof(argv[9]);
     end = atof(argv[10]);
+
+    cerr << start << endl;
+    cerr << end << endl;
 
     w.inventory = S;
     w.onOrder = 0;
@@ -397,6 +405,5 @@ int main( int argc, char* argv[] ){
     else if(runMode == "TRIANGLE"){
         runTriangle(r, a, b, c);
     }
-	return 0;
+	return -1;
 }
-
