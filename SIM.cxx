@@ -13,7 +13,7 @@ public:
         r = ifstream(filename, std::ifstream::in);
         if(!r){
             cerr << "Error opening random file" << endl;
-            ::exit(1);
+            ::exit(-1);
         }
     }
     double getU(){
@@ -23,7 +23,7 @@ public:
         }
         else{
             cerr << "Ran out of random numbers" << endl;
-            ::exit(0);
+            ::exit(-1);
         }
         return u;
     }
@@ -153,7 +153,6 @@ double nextArrival(double previousArrival, vector<Demand> demands, RandomFile &r
 }
 
 double calculateDeliveryLag(double t, double previousTime, double q, double a, double b, double c, double u){
-    // return previousTime + ((A + q) / M) + Pi + Triangular(a, b, c, u);
     return max(previousTime, t) + (double(387 + q) / 13.0) + 23.7 + Triangular(a, c, b, u); 
 }
 
@@ -361,7 +360,7 @@ int main( int argc, char* argv[] ){
         definitionFile = ifstream(argc > 3 ? argv[3] : "/dev/null", std::ifstream::in);
         if(!definitionFile){
             cerr << "Error opening definition file" << endl;
-                ::exit(1);
+                ::exit(-1);
         }
         else{
             //fills in demand objects
@@ -387,6 +386,11 @@ int main( int argc, char* argv[] ){
     a = atof(argv[4]);
     b = atof(argv[5]);
     c = atof(argv[6]);
+
+    if(!(a <= c && c < b) || !(a < c && c < b) || !(a < c && c <= b)){
+        cerr << "The requirement is: a <= c < b, a < c < b, or a < c <= b. Please ensure your values meet this requirement." << endl;
+        ::exit(-1);
+    }
 
     S = stoi(argv[7]);
     s = stoi(argv[8]);
