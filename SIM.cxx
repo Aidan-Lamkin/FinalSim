@@ -204,8 +204,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 Event nextRestock;
                 nextRestock.type = "inventoryRestock";
                 nextRestock.numberOfCars = S - (w.inventory + w.onOrder);
-                nextRestock.at = t + calculateDeliveryLag(t,w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
-
+                nextRestock.at = calculateDeliveryLag(t,w.previousDeliveryTime, nextRestock.numberOfCars, a, b, c, r.getU());
                 w.onOrder += nextRestock.numberOfCars;
                 eventList.push(nextRestock);
                 if(t >= start){
@@ -214,13 +213,13 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
         }
         else if(currentEvent.type == "inventoryRestock"){
-            // cout << "DEBUG: restock of " << currentEvent.numberOfCars << " at time of " << t << endl; 
+            //cout << "DEBUG: restock of " << currentEvent.numberOfCars << " at time of " << t << endl; 
 
             w.onOrder -= currentEvent.numberOfCars;
             w.inventory += currentEvent.numberOfCars;
 
             w.previousDeliveryTime = t; // update the previous delivery time to current time
-            
+
             // Everytime we get new orders, cycle through the N new cars arriving, and calculate the penalty
             int numberOfCarsToGive = currentEvent.numberOfCars;
             while(!backOrders.empty() && numberOfCarsToGive > 0){
@@ -234,7 +233,6 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
             }
         }
         else if(currentEvent.type == "carDemand"){
-            // cout << "DEBUG: demand at time " << t << endl;
 
             //schedule next demand
             Event nextDemand;
@@ -300,6 +298,7 @@ void runSim(Welford &w, RandomFile &r, double a, double b, double c, int S, int 
                 }
             }
         }
+        
         //update statistics if in results window
         if(t >= start){
             if(w.inventory < w.minInventory){
@@ -406,10 +405,10 @@ int main( int argc, char* argv[] ){
             Welford newW = Welford();
             newW.inventory = S;
             newW.onOrder = 0;
-            for(int i = 0; i < 5; i++){
+            for(int i = 0; i < 2; i++){
                 runSim(newW, r, a, b, c, S, newS, start, end, demands);
             }
-            cout << (newW.penalties / 5.0) << endl;
+            cout << ((double)newW.penalties / 2.0) << endl;
         }
     }
     else if(runMode == "TRIANGLE"){
